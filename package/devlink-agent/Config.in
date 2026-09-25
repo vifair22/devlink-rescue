@@ -1,0 +1,9 @@
+config BR2_PACKAGE_DEVLINK_AGENT
+	bool "devlink-agent"
+	depends on BR2_USE_MMU # fork
+	help
+	  The devlink agent for Linux: serves a devlink client over a
+	  serial line, so a session on another machine can run commands
+	  and move files here. Built static from the devlink source.
+
+	  https://git.airies.net/vifair22/devlink

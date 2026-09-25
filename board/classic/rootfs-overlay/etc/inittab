@@ -1,0 +1,24 @@
+# devlink-rescue classic: busybox init.
+#
+# ttyS0 belongs to the agent and nothing else writes to it: no getty, no
+# kernel console. The agent's own log goes to /dev/console (the VGA screen),
+# which is what the empty id field means, so whoever is at the machine can
+# watch the session. respawn restarts it after @stop or a crash; @stop after
+# a put of a new binary is how it is updated. A failed start (no ttyS0 on this
+# machine) waits before the next try rather than filling the screen.
+
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mount -t sysfs sysfs /sys
+::sysinit:/bin/mkdir -p /dev/pts /dev/shm /tmp /mnt
+::sysinit:/bin/mount -t devpts devpts /dev/pts
+::sysinit:/bin/mount -t tmpfs tmpfs /dev/shm
+::sysinit:/bin/hostname -F /etc/hostname
+
+::respawn:/bin/sh -c "/usr/sbin/devlink-agent serve /dev/ttyS0 115200 || sleep 5"
+
+# A root shell on the second virtual console (Alt-F2), for anyone at the
+# keyboard. No login: this image has no secrets and no network.
+tty2::respawn:-/bin/sh
+
+::ctrlaltdel:/sbin/reboot
+::shutdown:/bin/umount -a -r

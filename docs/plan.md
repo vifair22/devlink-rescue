@@ -73,7 +73,24 @@ Decided against:
 - **The kernel's ntfs3** in place of ntfs-3g. Smaller, but less trusted on a
   damaged volume, and a rescue image meets damaged volumes.
 
+Found while packaging (2026-09-25):
+
+- **chntpw is built without DOCRYPTO.** That drops OpenSSL entirely, at the
+  cost of setting new passwords; it can still blank them, which its own source
+  calls the reliable operation on XP and later anyway.
+- **ms-sys has no NT5 NTFS boot record**, only Windows 7's, which loads
+  BOOTMGR rather than NTLDR. A 2000/XP NTFS boot sector is restored from the
+  backup copy NTFS keeps in the volume's last sector (dd, or `ntfsfix`). Its
+  MBRs (95B/98/ME, 2000/XP) and FAT boot records are all there.
+- **usbutils is out**: Buildroot's needs udev. busybox's `lsusb` reads sysfs,
+  which is enough for a survey. hwclock is busybox's too.
+- **hdparm is the full one**, not busybox's, for `-I`.
+
 Open:
+
+- **cabextract.** 9x keeps registry backups as `RB00x.CAB`; Buildroot has
+  libmspack but no cabextract binary. A small package here would make that
+  restore possible without another machine.
 
 - **`pci.ids`** is over 1 MB. Trim it to vendors and devices before about 2005,
   or compress it; decided when the image size is known.

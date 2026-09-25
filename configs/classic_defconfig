@@ -1,0 +1,69 @@
+# The classic image: i586, serial only, as little RAM as it can manage.
+# docs/plan.md has the reasoning; this file is the decisions.
+
+# CPU floor: any Pentium. The toolchain wrapper adds -march=i586 to every
+# package, the agent included.
+BR2_i386=y
+BR2_x86_i586=y
+
+# musl keeps binaries small; C++ is needed by smartmontools and ddrescue.
+BR2_TOOLCHAIN_BUILDROOT_MUSL=y
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_KERNEL_HEADERS_6_18=y
+BR2_OPTIMIZE_S=y
+
+BR2_TARGET_GENERIC_HOSTNAME="rescue"
+BR2_TARGET_GENERIC_ISSUE="devlink-rescue classic"
+# No getty on the serial port: ttyS0 belongs to the agent (see inittab).
+# BR2_TARGET_GENERIC_GETTY is not set
+BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/rootfs-overlay"
+
+# Kernel: the 6.18 LTS series, configured from a fragment on top of
+# allnoconfig (board/classic/linux.defconfig is generated from it).
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6.18.33"
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/linux.defconfig"
+BR2_LINUX_KERNEL_BZIMAGE=y
+
+# The userland is an initramfs, kept beside the kernel rather than built into
+# it, so either can be replaced without the other. Buildroot leaves it
+# uncompressed; post-image.sh compresses it with a dictionary the kernel can
+# allocate on a small machine.
+BR2_TARGET_ROOTFS_CPIO=y
+BR2_TARGET_ROOTFS_CPIO_NONE=y
+BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/post-build.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/post-image.sh"
+# BR2_TARGET_ROOTFS_TAR is not set
+
+# The agent
+BR2_PACKAGE_DEVLINK_AGENT=y
+
+# The toolkit (docs/plan.md, "Toolkit"). lsusb and hwclock come from busybox;
+# usbutils would bring udev with it.
+BR2_PACKAGE_NTFS_3G=y
+BR2_PACKAGE_NTFS_3G_NTFSPROGS=y
+BR2_PACKAGE_DOSFSTOOLS=y
+BR2_PACKAGE_DOSFSTOOLS_FATLABEL=y
+BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT=y
+BR2_PACKAGE_DOSFSTOOLS_MKFS_FAT=y
+BR2_PACKAGE_MTOOLS=y
+BR2_PACKAGE_E2FSPROGS=y
+BR2_PACKAGE_E2FSPROGS_RESIZE2FS=y
+BR2_PACKAGE_UTIL_LINUX=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
+BR2_PACKAGE_UTIL_LINUX_WIPEFS=y
+BR2_PACKAGE_PARTED=y
+BR2_PACKAGE_DDRESCUE=y
+# The full hdparm, not busybox's: -I reports far more.
+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_HDPARM=y
+BR2_PACKAGE_SMARTMONTOOLS=y
+# pciutils ships its own pci.ids; with zlib it installs and reads it gzipped.
+BR2_PACKAGE_PCIUTILS=y
+BR2_PACKAGE_ZLIB=y
+BR2_PACKAGE_DMIDECODE=y
+BR2_PACKAGE_MEMTESTER=y
+BR2_PACKAGE_CHNTPW=y
+BR2_PACKAGE_MS_SYS=y

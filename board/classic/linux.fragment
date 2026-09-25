@@ -1,0 +1,173 @@
+# Kernel options for the classic image, applied on top of allnoconfig.
+# board/classic/mkconfig.sh turns this into linux.defconfig; edit this file,
+# not that one. Everything is built in: no modules, so nothing to load and
+# nothing to match to a kernel version in the initramfs.
+
+# --- CPU and memory ---------------------------------------------------------
+# Any Pentium. HIGHMEM4G so a late machine with 1 GB or more sees all of it.
+CONFIG_M586TSC=y
+CONFIG_HIGHMEM4G=y
+CONFIG_KERNEL_XZ=y
+CONFIG_CC_OPTIMIZE_FOR_SIZE=y
+# The kernel's own RAM pattern test, on request with memtest= on the command
+# line; a start before memtester in userland is.
+CONFIG_MEMTEST=y
+
+# --- Core -------------------------------------------------------------------
+CONFIG_PRINTK=y
+CONFIG_BUG=y
+CONFIG_MULTIUSER=y
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_RD_XZ=y
+CONFIG_BINFMT_ELF=y
+CONFIG_BINFMT_SCRIPT=y
+CONFIG_PROC_FS=y
+CONFIG_SYSFS=y
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+CONFIG_TMPFS=y
+CONFIG_FUTEX=y
+CONFIG_EPOLL=y
+CONFIG_SIGNALFD=y
+CONFIG_TIMERFD=y
+CONFIG_EVENTFD=y
+CONFIG_SHMEM=y
+CONFIG_POSIX_TIMERS=y
+# The serial layer locks the port with flock.
+CONFIG_FILE_LOCKING=y
+CONFIG_MAGIC_SYSRQ=y
+
+# --- Firmware and power -----------------------------------------------------
+# ACPI for power-off and IRQ routing. acpi=off on the command line when a
+# BIOS's tables are the problem. No APM: it needs PM_SLEEP, which is suspend
+# code carried only to switch off pre-ACPI boards, most of which have AT power
+# supplies that cannot switch themselves off anyway. Those halt.
+CONFIG_ACPI=y
+CONFIG_DMI=y
+CONFIG_DMIID=y
+# What the BIOS says about its disks, geometry included, in
+# /sys/firmware/edd: what mkfs and mkntfs need to be told for a volume to boot.
+CONFIG_EDD=y
+CONFIG_DEVMEM=y
+CONFIG_X86_MSR=y
+CONFIG_X86_CPUID=y
+
+# --- Console and serial -----------------------------------------------------
+# The console is the VGA screen; ttyS0 belongs to the agent. console=ttyS1
+# on the command line moves kernel messages to COM2 for bringing an image up.
+CONFIG_TTY=y
+CONFIG_VT=y
+CONFIG_VT_CONSOLE=y
+CONFIG_VGA_CONSOLE=y
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+CONFIG_SERIAL_8250_PCI=y
+CONFIG_INPUT=y
+CONFIG_INPUT_KEYBOARD=y
+CONFIG_KEYBOARD_ATKBD=y
+CONFIG_SERIO=y
+CONFIG_SERIO_I8042=y
+
+# --- Buses ------------------------------------------------------------------
+CONFIG_PCI=y
+CONFIG_PCI_GOANY=y
+
+# --- Disks: IDE/PATA and early SATA -----------------------------------------
+CONFIG_BLK_DEV=y
+CONFIG_BLK_DEV_LOOP=y
+CONFIG_BLK_DEV_FD=y
+CONFIG_PARTITION_ADVANCED=y
+CONFIG_MSDOS_PARTITION=y
+CONFIG_ATA=y
+CONFIG_ATA_VERBOSE_ERROR=y
+CONFIG_SATA_AHCI=y
+CONFIG_ATA_SFF=y
+CONFIG_ATA_BMDMA=y
+CONFIG_ATA_PIIX=y
+CONFIG_SATA_PROMISE=y
+CONFIG_SATA_SIL=y
+CONFIG_SATA_VIA=y
+CONFIG_PATA_ALI=y
+CONFIG_PATA_AMD=y
+CONFIG_PATA_ARTOP=y
+CONFIG_PATA_ATIIXP=y
+CONFIG_PATA_CMD64X=y
+CONFIG_PATA_CS5520=y
+CONFIG_PATA_CS5530=y
+CONFIG_PATA_CYPRESS=y
+CONFIG_PATA_EFAR=y
+CONFIG_PATA_HPT366=y
+CONFIG_PATA_HPT37X=y
+CONFIG_PATA_HPT3X2N=y
+CONFIG_PATA_HPT3X3=y
+CONFIG_PATA_IT821X=y
+CONFIG_PATA_NS87415=y
+CONFIG_PATA_OLDPIIX=y
+CONFIG_PATA_OPTIDMA=y
+CONFIG_PATA_PDC2027X=y
+CONFIG_PATA_PDC_OLD=y
+CONFIG_PATA_SC1200=y
+CONFIG_PATA_SERVERWORKS=y
+CONFIG_PATA_SIL680=y
+CONFIG_PATA_SIS=y
+CONFIG_PATA_TRIFLEX=y
+CONFIG_PATA_VIA=y
+CONFIG_PATA_CMD640_PCI=y
+CONFIG_PATA_MPIIX=y
+CONFIG_PATA_NS87410=y
+CONFIG_PATA_OPTI=y
+CONFIG_PATA_RZ1000=y
+# Anything the specific drivers do not claim.
+CONFIG_ATA_GENERIC=y
+CONFIG_PATA_LEGACY=y
+
+# --- SCSI: the disks, CD-ROMs and the HBAs of the period --------------------
+CONFIG_SCSI=y
+CONFIG_BLK_DEV_SD=y
+CONFIG_BLK_DEV_SR=y
+CONFIG_CHR_DEV_SG=y
+CONFIG_SCSI_LOWLEVEL=y
+CONFIG_SCSI_AIC7XXX=y
+CONFIG_SCSI_AIC79XX=y
+CONFIG_SCSI_SYM53C8XX_2=y
+CONFIG_SCSI_BUSLOGIC=y
+CONFIG_FUSION=y
+CONFIG_FUSION_SPI=y
+
+# --- USB: storage and keyboards on UHCI, OHCI and EHCI ----------------------
+CONFIG_USB_SUPPORT=y
+CONFIG_USB=y
+CONFIG_USB_PCI=y
+CONFIG_USB_UHCI_HCD=y
+CONFIG_USB_OHCI_HCD=y
+CONFIG_USB_OHCI_HCD_PCI=y
+CONFIG_USB_EHCI_HCD=y
+CONFIG_USB_STORAGE=y
+CONFIG_HID_SUPPORT=y
+CONFIG_HID=y
+CONFIG_HID_GENERIC=y
+CONFIG_USB_HID=y
+
+# --- Filesystems ------------------------------------------------------------
+# ext4 serves ext2 and ext3 too. NTFS goes through FUSE (ntfs-3g).
+CONFIG_EXT4_FS=y
+CONFIG_MSDOS_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_FAT_DEFAULT_CODEPAGE=437
+CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+CONFIG_FUSE_FS=y
+CONFIG_ISO9660_FS=y
+CONFIG_JOLIET=y
+CONFIG_UDF_FS=y
+CONFIG_NLS=y
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_CODEPAGE_850=y
+CONFIG_NLS_ISO8859_1=y
+CONFIG_NLS_UTF8=y
+
+# --- Clock ------------------------------------------------------------------
+# The CMOS clock, read at boot, and /dev/rtc0 for hwclock.
+CONFIG_RTC_CLASS=y
+CONFIG_RTC_HCTOSYS=y
+CONFIG_RTC_INTF_DEV=y
+CONFIG_RTC_DRV_CMOS=y

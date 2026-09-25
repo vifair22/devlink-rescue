@@ -1,0 +1,3 @@
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/chntpw/Config.in"
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/devlink-agent/Config.in"
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/ms-sys/Config.in"

@@ -1,0 +1,9 @@
+config BR2_PACKAGE_CHNTPW
+	bool "chntpw"
+	help
+	  Offline editing of Windows NT registry hives and SAM: chntpw,
+	  reged, sampasswd and samusrgrp. Built without DOCRYPTO, so it
+	  resets (blanks) passwords rather than setting new ones, and
+	  needs no OpenSSL.
+
+	  https://pogostick.net/~pnh/ntpasswd/

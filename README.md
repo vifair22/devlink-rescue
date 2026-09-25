@@ -7,4 +7,24 @@ installs booting again.
 
 It produces a kernel and an initramfs. How they are booted is up to you.
 
-Nothing is built yet. `docs/plan.md` has the design and the order of work.
+`docs/plan.md` has the design and the order of work.
+
+## Building
+
+Buildroot is pinned as a submodule (2026.02.3 LTS), with this repo as its
+external tree.
+
+```sh
+git submodule update --init
+make classic            # -> build/classic/images/{bzImage,rootfs.cpio.xz}
+make qemu-classic       # boot it as a Pentium with 32 MB, agent on a pty
+make classic-menuconfig # change the config and save it back
+```
+
+The first build compiles an i586 musl toolchain and takes a while. The kernel
+config is generated from `board/classic/linux.fragment` by
+`board/classic/mkconfig.sh`; edit the fragment, not `linux.defconfig`.
+
+To build the agent from a devlink working tree rather than the pinned commit,
+put `DEVLINK_AGENT_OVERRIDE_SRCDIR = /path/to/devlink` in
+`build/classic/local.mk`.

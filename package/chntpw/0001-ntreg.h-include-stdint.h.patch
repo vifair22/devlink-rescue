@@ -1,0 +1,19 @@
+From: devlink-rescue
+Subject: ntreg.h: include stdint.h
+
+ntreg.h declares int32_t fields without including <stdint.h>, which glibc
+supplies by accident through other headers and musl does not.
+
+Upstream is inactive (last release 140201); not sent.
+
+--- a/ntreg.h	2026-09-25 18:42:03.321055655 -0500
++++ b/ntreg.h	2026-09-25 18:42:03.322388045 -0500
+@@ -25,6 +25,8 @@
+ #ifndef _INCLUDE_NTREG_H
+ #define _INCLUDE_NTREG_H 1
+ 
++#include <stdint.h>
++
+ #define SZ_MAX     4096       /* Max unicode strlen before we truncate */
+ 
+ #define KEY_ROOT   0x2c         /* Type ID of ROOT key node */

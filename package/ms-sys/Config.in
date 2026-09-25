@@ -1,0 +1,9 @@
+config BR2_PACKAGE_MS_SYS
+	bool "ms-sys"
+	help
+	  Writes Microsoft-compatible master boot records and FAT boot
+	  records: the 95B/98/ME and 2000/XP MBRs, FAT16/FAT32 DOS boot
+	  records and FAT32 NT5 boot records. It has no NT5 NTFS boot
+	  record; restore that from the volume's own backup copy.
+
+	  https://ms-sys.sourceforge.net/

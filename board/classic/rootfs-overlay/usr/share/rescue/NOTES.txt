@@ -1,0 +1,78 @@
+devlink-rescue classic: notes for whoever is driving this machine
+=================================================================
+
+Read this first: cat /usr/share/rescue/NOTES.txt
+
+What this is
+------------
+A Linux image running entirely from RAM on a machine whose own OS will not
+boot. Nothing on its disks has been touched; nothing is mounted. The devlink
+agent owns COM1 (ttyS0, 115200). Its log is on the VGA screen, and there is a
+root shell on the second virtual console (Alt-F2) for anyone at the keyboard.
+
+Everything here is lost at power-off. Write results to a disk, or get them.
+
+First look at the machine
+-------------------------
+  cat /proc/cpuinfo /proc/meminfo       CPU, RAM
+  dmidecode                             board, BIOS, slots (DMI 2.x era on)
+  lspci -nn                             PCI devices with vendor:device IDs
+  lsusb                                 USB (busybox's; reads sysfs)
+  dmesg                                 what the kernel found, and failed on
+  lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL  disks and partitions
+  blkid                                 filesystems and their labels
+  hdparm -I /dev/sda                    what an ATA disk says about itself
+  smartctl -a /dev/sda                  SMART health, if the disk has it
+  ls /sys/firmware/edd                  the BIOS's own view of its disks
+  cat /sys/firmware/edd/int13_dev80/legacy_max_head
+                                        geometry the BIOS uses (see below)
+
+Tools
+-----
+  NTFS         ntfs-3g (mount -t ntfs-3g), ntfsfix, ntfsresize, ntfsclone,
+               ntfslabel, ntfsundelete, ntfsinfo, mkntfs
+  FAT          fsck.fat, mkfs.fat, fatlabel, mtools (mdir, mcopy: no mount)
+  ext2/3/4     e2fsck, mke2fs, resize2fs, tune2fs
+  Partitions   fdisk, sfdisk, parted, wipefs, blkid, lsblk
+  Imaging      ddrescue, dd
+  Boot         ms-sys (MBRs and FAT boot records)
+  Registry     chntpw, reged, sampasswd, samusrgrp (NT hives and SAM)
+  Hardware     memtester, hdparm, smartctl, dmidecode, lspci
+  Clock        date, hwclock
+
+Traps
+-----
+These fail quietly: the command succeeds and the machine still does not boot.
+
+* Partition alignment. Modern fdisk starts partitions at 1 MiB. DOS, 9x and
+  BIOSes of the period expect cylinder alignment: the first partition at
+  sector 63, every partition ending on a cylinder boundary. For these
+  machines use DOS-compatible cylinder units: fdisk -c=dos -u=cylinders.
+
+* Geometry in the boot sector. NTLDR's and IO.SYS's boot code read the disk
+  by the heads and sectors per track recorded in the filesystem's boot sector.
+  Give mkfs.fat and mkntfs the BIOS's geometry (/sys/firmware/edd above):
+  mkfs.fat -g HEADS/SECTORS -h HIDDEN, mkntfs -H HEADS -S SECTORS -p HIDDEN.
+  ms-sys -p rewrites the partition info of a FAT boot record in place.
+
+* NTFS boot sectors on 2000/XP. ms-sys has only the Windows 7 NTFS boot
+  record, which loads BOOTMGR, not NTLDR: do not use ms-sys -n on these. NTFS
+  keeps a copy of its boot sector in the last sector of the volume; restore
+  that one (ntfsfix, or dd with the volume's sector count).
+
+* MBRs. ms-sys -9 is the 95B/98/ME MBR, ms-sys -m the 2000/XP one. Either
+  only writes boot code; the partition table is kept.
+
+* chntpw blanks passwords; it cannot set them (built without OpenSSL). Blank,
+  then set a new one from Windows.
+
+* The 9x registry (SYSTEM.DAT, USER.DAT) is not an NT hive and chntpw cannot
+  read it. Restore a backup instead: SYSTEM.1ST in the root of C:, or an
+  RB00x.CAB from C:\WINDOWS\SYSBCKUP (unpack elsewhere; nothing here reads CAB).
+
+* The hardware clock on a Windows machine keeps local time. The agent's
+  time --set sets only the system clock; once the zone is known, write the
+  hardware clock with: hwclock --localtime --systohc
+
+* NTFS written here should be checked by Windows. After repairs, ntfsfix
+  marks the volume for chkdsk at the next Windows boot; let it run.
