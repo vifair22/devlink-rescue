@@ -35,6 +35,11 @@ BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_CPIO_NONE=y
 BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/post-build.sh"
 BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/post-image.sh"
+# Tools in a squashfs over /usr, mounted at boot (post-fakeroot.sh says why).
+# Merged /usr so that /usr is all of them; host squashfs to build it.
+BR2_ROOTFS_MERGED_USR=y
+BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/post-fakeroot.sh"
+BR2_PACKAGE_HOST_SQUASHFS=y
 # BR2_TARGET_ROOTFS_TAR is not set
 
 # The agent

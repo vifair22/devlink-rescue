@@ -34,8 +34,11 @@ on by hand.
   without a TSC or CMPXCHG8B; the Pentium has both, so a current kernel
   serves this floor whether or not that lands. A few non-Intel 586-class
   parts lack a TSC; they are handled if one turns up.
-- **RAM: 32 MB**, 16 MB as a stretch. Measured on the first build, not
-  guessed at.
+- **RAM: 32 MB**, 16 MB as a stretch. Measured, not guessed at: it boots and
+  serves the agent at 32 MB with 13 MB free (2026-09-25). 24 MB fails before
+  unpacking: the kernel reports an invalid archive at the top of memory, where
+  QEMU loads it, which looks like early boot overwriting it rather than a
+  shortage. Open.
 - **Link: serial only.** The agent owns COM1 (`ttyS0`) at 115200. The kernel
   console goes to the VGA text console, never the agent's port, since boot
   messages on that line would land in the middle of frames. A build option
@@ -45,6 +48,14 @@ on by hand.
 
 - The whole userland is an initramfs and runs from RAM. Nothing touches a
   disk unless the session asks, which matters when the disk is the fault.
+- **The tools are a squashfs inside it.** Unpacked, the root was 12.6 MB and
+  did not fit 32 MB beside the archive it came from. With merged /usr, all of
+  /usr is packed into an xz squashfs (`/rescue/usr.sqfs`, 128 KiB blocks) and
+  loop-mounted over /usr at boot, so the tools cost RAM compressed plus cache
+  for what is in use. The initramfs keeps a real /usr of busybox, musl and the
+  notes, which is what boot needs and what still works if the mount fails.
+  The agent sits outside /usr at `/rescue/devlink-agent`, so it starts either
+  way and can be updated with a put. The initramfs unpacks to 6.4 MB.
 - busybox `init` runs the agent on `ttyS0` and respawns it, so a crashed agent
   comes back rather than leaving the machine unreachable.
 - The agent is statically linked against musl, `-march=i586`, from the devlink

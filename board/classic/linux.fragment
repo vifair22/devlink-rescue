@@ -156,6 +156,14 @@ CONFIG_VFAT_FS=y
 CONFIG_FAT_DEFAULT_CODEPAGE=437
 CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
 CONFIG_FUSE_FS=y
+# The tools live in an xz squashfs inside the initramfs, loop-mounted over
+# /usr (post-fakeroot.sh). Single decompressor and direct-to-page-cache reads
+# are the least memory squashfs can run in.
+CONFIG_MISC_FILESYSTEMS=y
+CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_XZ=y
+CONFIG_SQUASHFS_DECOMP_SINGLE=y
+CONFIG_SQUASHFS_FILE_DIRECT=y
 CONFIG_ISO9660_FS=y
 CONFIG_JOLIET=y
 CONFIG_UDF_FS=y

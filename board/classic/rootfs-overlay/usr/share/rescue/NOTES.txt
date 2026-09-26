@@ -12,6 +12,12 @@ root shell on the second virtual console (Alt-F2) for anyone at the keyboard.
 
 Everything here is lost at power-off. Write results to a disk, or get them.
 
+The tools are a compressed squashfs mounted over /usr at boot, so they cost
+RAM compressed. If a tool below is missing, that mount failed: see dmesg, and
+mount -t squashfs -o loop,ro /rescue/usr.sqfs /usr to retry. busybox works
+either way. The agent is /rescue/devlink-agent; to update it, put a new
+binary over that file and send @stop, and init starts the new one.
+
 First look at the machine
 -------------------------
   cat /proc/cpuinfo /proc/meminfo       CPU, RAM
