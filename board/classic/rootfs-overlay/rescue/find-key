@@ -1,0 +1,46 @@
+#!/bin/sh
+# The agent's TCP passphrase, taken from the machine's own Windows install.
+#
+# The agent serves TCP only with /rescue/DEVLINK.KEY beside it, and the
+# machine's Windows agent keeps the same file as \DEVLINK\DEVLINK.KEY. This
+# looks for that file on every NTFS and FAT partition, mounted read-only and
+# unmounted at once, and copies the first it finds. It runs before the agent
+# starts, so the agent comes up with TCP on.
+#
+# That reads a disk at boot, which the image otherwise never does unasked, so
+# it is kept small: read-only mounts, one file, and every mount bounded by a
+# timeout so a failing disk cannot hold up the agent for long. With no key
+# found, TCP stays off; put one over serial and @stop, and the respawned agent
+# picks it up:
+#   devlink put KEYFILE /rescue/DEVLINK.KEY && devlink exec @stop
+
+key=/rescue/DEVLINK.KEY
+mnt=/tmp/find-key
+say() { echo "find-key: $*" > /dev/console; }
+
+[ -s "$key" ] && exit 0
+mkdir -p "$mnt"
+
+for dev in $(awk 'NR > 2 { print $4 }' /proc/partitions); do
+    case $dev in loop* | sr* | ram* | fd*) continue ;; esac
+    case $(blkid -o value -s TYPE "/dev/$dev" 2>/dev/null) in
+    ntfs) timeout 20 ntfs-3g -o ro "/dev/$dev" "$mnt" 2>/dev/null || continue ;;
+    vfat) timeout 20 mount -t vfat -o ro "/dev/$dev" "$mnt" 2>/dev/null || continue ;;
+    *) continue ;;
+    esac
+    # NTFS names are case-sensitive here and Windows does not care, so match
+    # both names without case.
+    dir=$(ls "$mnt" 2>/dev/null | grep -ix devlink | head -n 1)
+    file=
+    [ -n "$dir" ] && file=$(ls "$mnt/$dir" 2>/dev/null | grep -ix devlink.key | head -n 1)
+    if [ -n "$file" ] && [ -s "$mnt/$dir/$file" ]; then
+        cp "$mnt/$dir/$file" "$key" && chmod 600 "$key"
+    fi
+    timeout 20 umount "$mnt" 2>/dev/null
+    if [ -s "$key" ]; then
+        say "TCP passphrase from /dev/$dev ($dir/$file)"
+        exit 0
+    fi
+done
+say "no DEVLINK/DEVLINK.KEY on any disk: TCP off until one is put"
+exit 0

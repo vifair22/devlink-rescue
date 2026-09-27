@@ -19,11 +19,22 @@
 ::sysinit:/bin/mount -t tmpfs tmpfs /dev/shm
 ::sysinit:/bin/hostname -F /etc/hostname
 
+# The TCP passphrase from the machine's own disk, before the agent starts
+# (/rescue/find-key says what it reads and how to supply one instead), and the
+# network, beside it.
+::sysinit:/rescue/find-key
+::once:/rescue/net-up
+
+# Serial on ttyS0, and TCP on port 2098 when /rescue/DEVLINK.KEY exists.
 ::respawn:/bin/sh -c "/rescue/devlink-agent serve /dev/ttyS0 115200 || sleep 5"
 
 # A root shell on the second virtual console (Alt-F2), for anyone at the
 # keyboard. No login: this image has no secrets and no network.
 tty2::respawn:-/bin/sh
 
+# The power button (acpid, /etc/acpi/PWRF/00000080) and Ctrl-Alt-Del.
+# acpid logs every event it has no handler for, such as the lid, so its log
+# goes nowhere rather than onto the screen.
+::respawn:/usr/sbin/acpid -f -l /dev/null
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/bin/umount -a -r

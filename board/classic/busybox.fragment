@@ -1,0 +1,8 @@
+# Busybox options on top of Buildroot's default busybox config.
+
+# acpid turns the ACPI power button into a clean poweroff. It reads the
+# button's key events from /dev/input and runs /etc/acpi/PWRF/00000080.
+CONFIG_ACPID=y
+
+# timeout bounds the disk mounts in /rescue/find-key.
+CONFIG_TIMEOUT=y

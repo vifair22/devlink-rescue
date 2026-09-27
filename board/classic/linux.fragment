@@ -33,6 +33,14 @@ CONFIG_TIMERFD=y
 CONFIG_EVENTFD=y
 CONFIG_SHMEM=y
 CONFIG_POSIX_TIMERS=y
+# The 32-bit time_t system calls. allnoconfig turns them off, and musl still
+# makes them whenever a time fits in 32 bits: sigtimedwait with a null or small
+# timeout goes to rt_sigtimedwait, not its _time64 twin. Without them every
+# such call failed at once with ENOSYS, and busybox init, which waits for its
+# signals that way, spun at 100% CPU and never collected one: Ctrl-Alt-Del,
+# reboot and poweroff all did nothing, and children went unreaped (found on
+# the A21m, 2026-09-27).
+CONFIG_COMPAT_32BIT_TIME=y
 # The serial layer locks the port with flock.
 CONFIG_FILE_LOCKING=y
 CONFIG_MAGIC_SYSRQ=y
@@ -43,6 +51,10 @@ CONFIG_MAGIC_SYSRQ=y
 # code carried only to switch off pre-ACPI boards, most of which have AT power
 # supplies that cannot switch themselves off anyway. Those halt.
 CONFIG_ACPI=y
+# The power button as a key event, for busybox acpid to turn into poweroff
+# (board/classic/busybox.fragment, rootfs-overlay/etc/acpi).
+CONFIG_ACPI_BUTTON=y
+CONFIG_INPUT_EVDEV=y
 CONFIG_DMI=y
 CONFIG_DMIID=y
 # What the BIOS says about its disks, geometry included, in
@@ -71,9 +83,90 @@ CONFIG_SERIO_I8042=y
 # --- Buses ------------------------------------------------------------------
 CONFIG_PCI=y
 CONFIG_PCI_GOANY=y
+# PC Card and CardBus sockets, as laptops of the period have (the A21m's are
+# a TI PCI1450). Without them the kernel lists the bridges and nothing in
+# them: on the A21m the CF card the image boots from was invisible. The ATA
+# driver below is what makes a CF or PC Card disk a disk.
+CONFIG_PCCARD=y
+CONFIG_PCMCIA=y
+CONFIG_CARDBUS=y
+CONFIG_YENTA=y
+
+# --- Network ----------------------------------------------------------------
+# IPv4 for the agent's TCP link and DHCP (busybox udhcpc, which needs raw
+# packet sockets). No IPv6: nothing on these LANs needs it. About 1.1 MB of
+# RAM with the drivers below, measured against 13 MB free at 32 MB.
+CONFIG_NET=y
+CONFIG_UNIX=y
+CONFIG_PACKET=y
+CONFIG_INET=y
+# CONFIG_IPV6 is not set
+# Drop-in microcode (/lib/firmware): the 82551's e100 needs it, the 82559's
+# only for an optional feature, and none is shipped.
+CONFIG_FW_LOADER=y
+CONFIG_NETDEVICES=y
+CONFIG_ETHERNET=y
+# The common Ethernet of 32-bit machines, 1995 to the end of the Pentium 4:
+# PCI and CardBus, PC Card (16-bit), and USB adapters. Built in, like
+# everything else here.
+CONFIG_NET_VENDOR_INTEL=y
+CONFIG_E100=y
+CONFIG_E1000=y
+CONFIG_NET_VENDOR_REALTEK=y
+CONFIG_8139CP=y
+CONFIG_8139TOO=y
+CONFIG_R8169=y
+CONFIG_NET_VENDOR_DEC=y
+CONFIG_NET_TULIP=y
+CONFIG_TULIP=y
+CONFIG_DM9102=y
+CONFIG_ULI526X=y
+CONFIG_WINBOND_840=y
+CONFIG_PCMCIA_XIRCOM=y
+CONFIG_NET_VENDOR_AMD=y
+CONFIG_PCNET32=y
+CONFIG_NET_VENDOR_3COM=y
+CONFIG_VORTEX=y
+CONFIG_PCMCIA_3C589=y
+CONFIG_PCMCIA_3C574=y
+CONFIG_NET_VENDOR_8390=y
+CONFIG_NE2K_PCI=y
+CONFIG_PCMCIA_PCNET=y
+CONFIG_PCMCIA_AXNET=y
+CONFIG_NET_VENDOR_VIA=y
+CONFIG_VIA_RHINE=y
+CONFIG_NET_VENDOR_SIS=y
+CONFIG_SIS900=y
+CONFIG_NET_VENDOR_NATSEMI=y
+CONFIG_NATSEMI=y
+CONFIG_NET_VENDOR_NVIDIA=y
+CONFIG_FORCEDETH=y
+CONFIG_NET_VENDOR_BROADCOM=y
+CONFIG_B44=y
+CONFIG_TIGON3=y
+CONFIG_NET_VENDOR_MARVELL=y
+CONFIG_SKGE=y
+CONFIG_SKY2=y
+CONFIG_NET_VENDOR_SMSC=y
+CONFIG_PCMCIA_SMC91C92=y
+CONFIG_NET_VENDOR_XIRCOM=y
+CONFIG_PCMCIA_XIRC2PS=y
+CONFIG_NET_VENDOR_FUJITSU=y
+CONFIG_PCMCIA_FMVJ18X=y
+CONFIG_USB_NET_DRIVERS=y
+CONFIG_USB_USBNET=y
+CONFIG_USB_NET_AX8817X=y
+CONFIG_USB_NET_CDCETHER=y
+CONFIG_USB_PEGASUS=y
+CONFIG_USB_RTL8150=y
 
 # --- Disks: IDE/PATA and early SATA -----------------------------------------
 CONFIG_BLK_DEV=y
+# ntfs-3g writes through the partition it has open and then mounts it as
+# fuseblk; with writes to mounted devices refused (allnoconfig's choice since
+# 6.8) every read-write NTFS mount failed with "Resource busy". Read-only ones
+# worked, which is how it went unnoticed.
+CONFIG_BLK_DEV_WRITE_MOUNTED=y
 CONFIG_BLK_DEV_LOOP=y
 CONFIG_BLK_DEV_FD=y
 CONFIG_PARTITION_ADVANCED=y
@@ -117,6 +210,8 @@ CONFIG_PATA_MPIIX=y
 CONFIG_PATA_NS87410=y
 CONFIG_PATA_OPTI=y
 CONFIG_PATA_RZ1000=y
+# CompactFlash and ATA PC Cards in a PC Card socket.
+CONFIG_PATA_PCMCIA=y
 # Anything the specific drivers do not claim.
 CONFIG_ATA_GENERIC=y
 CONFIG_PATA_LEGACY=y

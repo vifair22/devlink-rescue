@@ -17,6 +17,7 @@ BR2_TARGET_GENERIC_ISSUE="devlink-rescue classic"
 # No getty on the serial port: ttyS0 belongs to the agent (see inittab).
 # BR2_TARGET_GENERIC_GETTY is not set
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/rootfs-overlay"
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/classic/busybox.fragment"
 
 # Kernel: the 6.18 LTS series, configured from a fragment on top of
 # allnoconfig (board/classic/linux.defconfig is generated from it).

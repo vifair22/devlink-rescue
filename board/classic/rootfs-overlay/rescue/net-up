@@ -1,0 +1,24 @@
+#!/bin/sh
+# Brings up every Ethernet interface with DHCP (busybox udhcpc), in the
+# background, so that the agent's TCP link has an address to listen on.
+#
+# Runs once, beside the agent rather than before it: a LAN with no DHCP
+# server must not hold up the serial link. It watches for 30 s after boot,
+# since a USB adapter appears a second or two after the PCI cards do. A lease
+# arriving later is fine: the agent listens on every address.
+
+ip link set lo up
+seen=" lo "
+i=0
+while [ $i -lt 30 ]; do
+    for path in /sys/class/net/*; do
+        n=${path##*/}
+        case $seen in *" $n "*) continue ;; esac
+        seen="$seen$n "
+        ip link set "$n" up
+        # -b: to the background if no lease comes at once, and keep trying.
+        udhcpc -i "$n" -b -t 5 -T 3 -x hostname:rescue > /dev/console 2>&1
+    done
+    sleep 1
+    i=$((i + 1))
+done

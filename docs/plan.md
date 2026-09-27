@@ -15,13 +15,18 @@ separate problem.
 
 Anything 64-bit is out of scope too: it runs the regular Arch rescue stick.
 
-## Two images
+## One image
 
-- **classic**: the floor. i586, serial only, as little RAM as it can manage.
-  For 9x and NT-era machines, which are the ones that are picky. Built first.
-- **modern**: XP-era machines, serial and networking. Deferred until classic
-  works; it is expected to be the classic image plus NIC drivers, a network
-  stack and a decision about how the agent authenticates on a LAN.
+Decided 2026-09-27: one image, with networking. The plan had two, a serial-only
+**classic** for the picky 9x and NT machines and a **modern** one adding a
+network for XP-era machines, deferred until classic worked. Measured, the
+network stack and the era's Ethernet drivers cost about 3.3 MB of RAM at the
+32 MB floor, which leaves 10 MB, so the split bought nothing worth a second
+image. The build and its files keep the name classic.
+
+The image is for 32-bit machines that cannot boot the regular Arch rescue
+stick; anything 64-bit runs that instead. Its drivers are the common hardware
+of that era and no more.
 
 Nothing older than 9x/NT is a goal. DOS-era machines are easy enough to work
 on by hand.
@@ -35,14 +40,26 @@ on by hand.
   serves this floor whether or not that lands. A few non-Intel 586-class
   parts lack a TSC; they are handled if one turns up.
 - **RAM: 32 MB**, 16 MB as a stretch. Measured, not guessed at: it boots and
-  serves the agent at 32 MB with 13 MB free (2026-09-25). 24 MB fails before
+  serves the agent at 32 MB with 13 MB free (2026-09-25), and 10 MB available
+  with the network up and a TCP session open (2026-09-27). 24 MB fails before
   unpacking: the kernel reports an invalid archive at the top of memory, where
   QEMU loads it, which looks like early boot overwriting it rather than a
   shortage. Open.
-- **Link: serial only.** The agent owns COM1 (`ttyS0`) at 115200. The kernel
-  console goes to the VGA text console, never the agent's port, since boot
-  messages on that line would land in the middle of frames. A build option
-  puts the console on COM2 (`ttyS1`) for bringing the image up.
+- **Link: serial, and TCP when there is a key.** The agent owns COM1
+  (`ttyS0`) at 115200. The kernel console goes to the VGA text console, never
+  the agent's port, since boot messages on that line would land in the middle
+  of frames. A build option puts the console on COM2 (`ttyS1`) for bringing
+  the image up.
+- TCP is devlink's own (Noise, pre-shared passphrase) on port 2098, served
+  beside serial. Every Ethernet interface gets DHCP at boot (`/rescue/net-up`,
+  busybox udhcpc, in the background so a LAN without DHCP holds nothing up).
+  The passphrase is the machine's own: `/rescue/find-key` looks for
+  `\DEVLINK\DEVLINK.KEY`, which the machine's Windows agent keeps, on each
+  NTFS and FAT partition before the agent starts, read-only and with every
+  mount under a timeout. That is the one disk read the image makes unasked. No
+  key found means no TCP until one is put over serial
+  (`devlink put KEY /rescue/DEVLINK.KEY`, then `@stop`). No key is ever built
+  into the image: anyone with the ISO would hold it.
 
 ### Shape
 
@@ -61,8 +78,18 @@ on by hand.
 - The agent is statically linked against musl, `-march=i586`, from the devlink
   source. One binary, no loader, no library versions to match.
 - The kernel carries what these machines have: IDE/PATA, a few SCSI HBAs,
-  FAT/VFAT, FUSE (for NTFS), the 8250 UART, PCI, and USB mass storage on
-  UHCI/OHCI. No sound, no graphics beyond VGA text, no networking.
+  FAT/VFAT, FUSE (for NTFS), the 8250 UART, PCI, PC Card and CardBus sockets
+  (a CF card in one is a disk), USB mass storage on UHCI/OHCI, and Ethernet:
+  PCI and CardBus (e100, e1000, 8139, r8169, tulip and relatives, pcnet32,
+  3c59x, ne2k-pci, via-rhine, sis900, natsemi, forcedeth, b44, tg3, skge,
+  sky2), 16-bit PC Card (NE2000-class, 3c589/574, SMC91C92, Xircom,
+  Fujitsu) and USB (ASIX, CDC, Pegasus, RTL8150). IPv4 only. No sound, no
+  graphics beyond VGA text, no wireless.
+- Ctrl-Alt-Del reboots and the ACPI power button powers off (busybox acpid).
+  Both depend on the kernel's 32-bit time system calls, which allnoconfig
+  drops: musl uses them, and without them busybox init spun at 100% CPU and
+  acted on no signal at all. Found on the A21m, 2026-09-27; see
+  board/classic/linux.fragment.
 
 ### Toolkit
 
@@ -128,7 +155,7 @@ fails quietly:
 ## Build
 
 Buildroot, as an external tree (`BR2_EXTERNAL`) in this repo:
-`classic_defconfig` now, `modern_defconfig` later. A musl toolchain for i586,
+`classic_defconfig`. A musl toolchain for i586,
 the devlink agent as a local package built from the devlink source, and the
 tools above, most of which Buildroot already packages (ms-sys and chntpw may
 need package files here). One `make` yields a kernel and an initramfs.
@@ -147,5 +174,8 @@ need package files here). One `make` yields a kernel and an initramfs.
 3. **The classic image**, booted in QEMU as `-cpu pentium -m 32M` with its
    serial port on a pty, driven by the devlink client. The whole image is
    tested without real hardware.
-4. **Real hardware**, when there is a machine to try it on.
-5. **The modern image.**
+4. **Real hardware**: the A21m, 2026-09-27, booted from a CF card through
+   falcon. It found init spinning (32-bit time system calls missing), the
+   power button and CF card unsupported, and read-write NTFS refused; all
+   fixed in the kernel fragment.
+5. **Networking**, in the same image (see "One image").
