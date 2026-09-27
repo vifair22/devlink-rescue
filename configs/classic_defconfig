@@ -42,6 +42,18 @@ BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_DEVLINK_RESCUE_PATH)/board/class
 BR2_PACKAGE_HOST_SQUASHFS=y
 # BR2_TARGET_ROOTFS_TAR is not set
 
+# A BIOS-only El Torito ISO of the same kernel and initramfs, for loaders that
+# boot ISOs (falcon's ISO library). post-image.sh builds it rather than
+# Buildroot's iso9660 target, which packs its own copy of the initramfs
+# instead of the xz one above. No EFI image: every machine this is for is
+# BIOS-only.
+BR2_TARGET_SYSLINUX=y
+BR2_TARGET_SYSLINUX_ISOLINUX=y
+# The menu picks an entry by arrow key: isolinux 6.03 drops a label's APPEND
+# when the label is typed at its boot: prompt instead.
+BR2_TARGET_SYSLINUX_C32="menu.c32 libutil.c32 libcom32.c32"
+BR2_PACKAGE_HOST_XORRISO=y
+
 # The agent
 BR2_PACKAGE_DEVLINK_AGENT=y
 

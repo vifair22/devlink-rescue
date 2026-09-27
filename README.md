@@ -5,7 +5,11 @@ agent, for working on a stuck 32-bit-era PC over a serial cable: hardware
 survey, disk and filesystem repair, and getting Windows 9x, NT, 2000 and XP
 installs booting again.
 
-It produces a kernel and an initramfs. How they are booted is up to you.
+It produces a kernel and an initramfs. How they are booted is up to you; the
+classic build also packs them into `devlink-recovery.iso`, a BIOS-only
+isolinux CD with two entries, the second putting the kernel console on COM2
+(`board/classic/isolinux.cfg`). The ISO carries the same two files byte for
+byte, as `/isolinux/bzimage` and `/isolinux/initrd.xz`.
 
 `docs/plan.md` has the design and the order of work.
 
@@ -16,7 +20,7 @@ external tree.
 
 ```sh
 git submodule update --init
-make classic            # -> build/classic/images/{bzImage,rootfs.cpio.xz}
+make classic            # -> build/classic/images/{bzImage,rootfs.cpio.xz,devlink-recovery.iso}
 make qemu-classic       # boot it as a Pentium with 32 MB, agent on a pty
 make classic-menuconfig # change the config and save it back
 ```
