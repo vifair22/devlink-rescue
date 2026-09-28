@@ -6,3 +6,7 @@ CONFIG_ACPID=y
 
 # timeout bounds the disk mounts in /rescue/find-key.
 CONFIG_TIMEOUT=y
+
+# tar -z, so a gzipped bundle (a falcon station update) unpacks the usual way
+# rather than through gunzip -c | tar x.
+CONFIG_FEATURE_SEAMLESS_GZ=y

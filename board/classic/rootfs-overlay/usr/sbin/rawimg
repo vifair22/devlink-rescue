@@ -1,0 +1,109 @@
+#!/bin/sh
+# rawimg: write a floppy image and prove it landed, the Linux side of the
+# A21m's RAWIMG.EXE (thinkpad-a21m, tools/rawimg), with the same usage and the
+# same messages so a floppy written from either system reads the same:
+#
+#   rawimg A: FILE.IMG            write it, then read the disk back and compare
+#   rawimg -verify A: FILE.IMG    compare only
+#
+# A: and B: name /dev/fd0 and /dev/fd1; a /dev/fdN path works too. Floppies
+# only: whole disks are RAWIMG.EXE's PHYSn on Windows and not done here.
+#
+# The disk is written a cylinder at a time with fsync. The readback is the
+# point, so before it the device's buffers are flushed and the page cache
+# dropped: without that the "read" comes from memory and proves nothing.
+# Exit 0 only when every byte on the disk matches the image.
+set -u
+
+usage() {
+    echo "usage: rawimg [-verify] A: FILE.IMG" >&2
+    exit 2
+}
+
+fail() {
+    echo "rawimg: $*" >&2
+    exit 1
+}
+
+verify_only=0
+if [ "${1:-}" = "-verify" ]; then
+    verify_only=1
+    shift
+fi
+[ $# -eq 2 ] || usage
+case $1 in
+A: | a:) dev=/dev/fd0 ;;
+B: | b:) dev=/dev/fd1 ;;
+/dev/fd[0-9]) dev=$1 ;;
+*) fail "$1 is not a floppy drive (A:, B: or /dev/fdN)" ;;
+esac
+img=$2
+
+[ -b "$dev" ] || fail "$dev: no such floppy drive"
+[ -f "$img" ] || fail "$img: no such file"
+if grep -q "^$dev " /proc/mounts; then
+    fail "$dev is mounted; umount it first"
+fi
+
+size=$(wc -c <"$img")
+# The formats a PC floppy drive writes, by image size: heads and sectors per
+# track. Every one has 80 cylinders.
+case $size in
+1474560) heads=2 sectors=18 ;; # 1.44 MB
+737280) heads=2 sectors=9 ;;   # 720 KB
+1228800) heads=2 sectors=15 ;; # 1.2 MB
+2949120) heads=2 sectors=36 ;; # 2.88 MB
+*) fail "the image is $size bytes, not a 720K, 1.2M, 1.44M or 2.88M floppy" ;;
+esac
+cyls=80
+cyl=$((heads * sectors * 512))
+
+# The drive reports the capacity of the disk in it (or of its default format
+# when it cannot tell); a mismatch is the wrong disk or no disk.
+disk=$(blockdev --getsize64 "$dev" 2>/dev/null) || fail "$dev: cannot read the disk's size; is a disk in the drive?"
+[ "$disk" = "$size" ] || fail "the image is $size bytes, the disk $disk"
+echo "$dev $cyls cylinders, $heads heads, $sectors sectors, $size bytes"
+
+# pass, cylinder: print at each tenth, as RAWIMG does. sh has no local
+# variables, so this one must not share a name with the callers' counter.
+progress() {
+    p_next=$(($2 + 1))
+    if [ $((p_next * 10 / cyls)) -ne $(($2 * 10 / cyls)) ]; then
+        echo "$1: $((p_next * 100 / cyls))% (cylinder $p_next of $cyls)"
+    fi
+}
+
+if [ $verify_only -eq 0 ]; then
+    c=0
+    while [ $c -lt $cyls ]; do
+        dd if="$img" of="$dev" bs=$cyl skip=$c seek=$c count=1 \
+            conv=notrunc,fsync 2>/dev/null ||
+            fail "write failed at byte $((c * cyl))"
+        progress write $c
+        c=$((c + 1))
+    done
+    echo "wrote $size bytes"
+fi
+
+sync
+blockdev --flushbufs "$dev" 2>/dev/null
+echo 3 >/proc/sys/vm/drop_caches 2>/dev/null
+
+back=/tmp/rawimg.$$
+trap 'rm -f "$back"' EXIT
+: >"$back"
+c=0
+while [ $c -lt $cyls ]; do
+    dd if="$dev" bs=$cyl skip=$c count=1 2>/dev/null >>"$back" ||
+        fail "read failed at byte $((c * cyl))"
+    progress verify $c
+    c=$((c + 1))
+done
+if ! cmp -s "$back" "$img"; then
+    # busybox cmp says "char N", GNU cmp "byte N".
+    at=$(cmp "$back" "$img" 2>/dev/null | sed -n 's/.* \(byte\|char\) \([0-9]*\).*/\2/p')
+    # cmp counts from 1; RAWIMG's offsets count from 0.
+    [ -n "$at" ] && at=$((at - 1))
+    fail "MISMATCH at byte ${at:-?}"
+fi
+echo "verified $size bytes: the disk matches the image"

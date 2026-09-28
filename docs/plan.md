@@ -43,7 +43,11 @@ on by hand.
   serves the agent at 32 MB with 13 MB free (2026-09-25), and 10 MB available
   with the network up and a TCP session open (2026-09-27). With the full disk
   toolkit (a 5.8 MB tools squashfs), 8.1 MB available with the network up
-  (2026-09-27, later). 24 MB fails before
+  (2026-09-27, later). The root filesystem is the kernel's rootfs, capped at
+  half of RAM: 8.5 MB at 32 MB, of which the image uses 6.3, so /tmp holds
+  about 2 MB there and a larger `devlink put` fails ("cannot write the file").
+  Big files go onto a mounted disk at that size; open whether to mount a
+  bigger tmpfs for /tmp. 24 MB fails before
   unpacking: the kernel reports an invalid archive at the top of memory, where
   QEMU loads it, which looks like early boot overwriting it rather than a
   shortage. Open.
@@ -76,7 +80,11 @@ on by hand.
   The agent sits outside /usr at `/rescue/devlink-agent`, so it starts either
   way and can be updated with a put. The initramfs unpacks to 6.4 MB.
 - busybox `init` runs the agent on `ttyS0` and respawns it, so a crashed agent
-  comes back rather than leaving the machine unreachable.
+  comes back rather than leaving the machine unreachable. Its status screen
+  (`serve --tui`, devlink's Manual.md) is on `tty1`, the console the machine
+  boots to: the work in progress, the log, and keys to restart the agent,
+  power off and reboot, which also stands in for a power button that reaches
+  no OS.
 - The agent is statically linked against musl, `-march=i586`, from the devlink
   source. One binary, no loader, no library versions to match.
 - The kernel carries what these machines have: IDE/PATA, a few SCSI HBAs,

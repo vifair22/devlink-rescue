@@ -7,7 +7,9 @@ What this is
 ------------
 A Linux image running entirely from RAM on a machine whose own OS will not
 boot. Nothing on its disks has been touched; nothing is mounted. The devlink
-agent owns COM1 (ttyS0, 115200). Its log is on the VGA screen, and there is a
+agent owns COM1 (ttyS0, 115200). Its status screen is the first console
+(Alt-F1): what it is doing, its log, and keys to scroll the log, restart it
+(r), power off (P) and reboot (B), each asking first; ? lists them. There is a
 root shell on the second virtual console (Alt-F2) for anyone at the keyboard.
 
 Everything here is lost at power-off. Write results to a disk, or get them.
@@ -45,6 +47,9 @@ Tools
                gdisk and sgdisk (GPT)
   Recovery     testdisk (lost partitions, boot sectors), photorec (carving)
   Imaging      ddrescue, dd
+  Floppies     rawimg A: FILE.IMG (write, then read back and compare; the
+               same command and messages as the A21m's RAWIMG.EXE),
+               rawimg -verify A: FILE.IMG (compare only)
   Boot         ms-sys (MBRs and FAT boot records)
   Station      falcon-boot-mkstick32 (falcon station-legacy onto a disk;
                its files come from the card: see STATION/INSTALL.TXT there)
