@@ -91,7 +91,13 @@ on by hand.
   Both depend on the kernel's 32-bit time system calls, which allnoconfig
   drops: musl uses them, and without them busybox init spun at 100% CPU and
   acted on no signal at all. Found on the A21m, 2026-09-27; see
-  board/classic/linux.fragment.
+  board/classic/linux.fragment. A laptop's power button, lid and Fn keys also
+  need the ACPI EC driver, which allnoconfig drops as well.
+- **The A21m's power button raises no ACPI event**, under this image or
+  Windows 2000, and its BIOS has no setting for it: its FADT calls it a
+  fixed-feature button, the fixed power-button event is enabled, and a press
+  sets nothing and raises no SCI (2026-09-27). Turn the image off there with
+  `poweroff` (over devlink, or at the console) or by holding the switch.
 
 ### Toolkit
 
@@ -186,5 +192,8 @@ need package files here). One `make` yields a kernel and an initramfs.
 4. **Real hardware**: the A21m, 2026-09-27, booted from a CF card through
    falcon. It found init spinning (32-bit time system calls missing), the
    power button and CF card unsupported, and read-write NTFS refused; all
-   fixed in the kernel fragment.
+   fixed in the kernel fragment. The image after the toolkit (`4578a99`,
+   booted from the station on the A21m's own disk) passed there: disks,
+   init idle, an NTFS write, exFAT, Ctrl-Alt-Del, `mkstick32 station status`.
+   The power button is the machine's (see Shape).
 5. **Networking**, in the same image (see "One image").
