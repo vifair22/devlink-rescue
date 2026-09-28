@@ -7,7 +7,7 @@
 # Pinned to a devlink commit. To build from a working tree instead, put
 #   DEVLINK_AGENT_OVERRIDE_SRCDIR = /path/to/devlink
 # in build/<image>/local.mk.
-DEVLINK_AGENT_VERSION = c992cb7885541e7bfe956fdce0d4ad8d99447cf5
+DEVLINK_AGENT_VERSION = 8c95b871b61df83c0243f6b959db1a55c1a3b2f2
 DEVLINK_AGENT_SITE = https://git.airies.net/vifair22/devlink.git
 DEVLINK_AGENT_SITE_METHOD = git
 DEVLINK_AGENT_LICENSE = GPL-3.0
