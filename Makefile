@@ -3,6 +3,7 @@
 # make classic          kernel and initramfs -> build/classic/images/
 # make classic-menuconfig   change the classic config, then savedefconfig
 # make qemu-classic     boot it in QEMU with the agent on a pty
+# make classic-source   download every source into buildroot/dl (no build)
 #
 # Buildroot's own tree stays clean: every build lives under build/<image>/.
 
@@ -10,7 +11,7 @@ BR       := $(CURDIR)/buildroot
 BUILD    := $(CURDIR)/build
 BR_MAKE   = $(MAKE) -C $(BR) O=$(BUILD)/$(1) BR2_EXTERNAL=$(CURDIR)
 
-.PHONY: classic classic-config classic-menuconfig qemu-classic clean
+.PHONY: classic classic-config classic-menuconfig classic-source qemu-classic clean
 
 $(BUILD)/classic/.config: configs/classic_defconfig
 	$(call BR_MAKE,classic) classic_defconfig
@@ -19,6 +20,9 @@ classic-config: $(BUILD)/classic/.config
 
 classic: $(BUILD)/classic/.config
 	$(call BR_MAKE,classic)
+
+classic-source: $(BUILD)/classic/.config
+	$(call BR_MAKE,classic) source
 
 classic-menuconfig: $(BUILD)/classic/.config
 	$(call BR_MAKE,classic) menuconfig

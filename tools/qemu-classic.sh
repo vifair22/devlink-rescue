@@ -4,6 +4,8 @@
 #   tools/qemu-classic.sh               boot it; Ctrl-C to stop
 #   MEM=16M tools/qemu-classic.sh       try another amount of RAM
 #   DISK=win98.img tools/qemu-classic.sh   with a disk image as the first IDE disk
+#   QEMU=qemu-system-x86_64 tools/qemu-classic.sh   where there is no i386
+#                                       build; -cpu pentium makes it the same
 #
 # COM1 is a pty linked at build/qemu/com1, which is where the agent listens:
 #   DEVLINK_LINE=build/qemu/com1 devlink info
@@ -24,7 +26,7 @@ if [ -n "${DISK:-}" ]; then
 fi
 
 echo "COM1 (agent): $run/com1    console: $run/console.log"
-exec qemu-system-i386 \
+exec "${QEMU:-qemu-system-i386}" \
     -cpu pentium -m "$mem" -no-reboot \
     -display none -monitor none \
     -kernel "$images/bzImage" -initrd "$images/rootfs.cpio.xz" \

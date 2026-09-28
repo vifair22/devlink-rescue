@@ -1,0 +1,8 @@
+config BR2_PACKAGE_FATRESIZE
+	bool "fatresize"
+	depends on BR2_PACKAGE_PARTED
+	help
+	  Resizes a FAT16 or FAT32 file system in place, through
+	  libparted: the FAT counterpart of ntfsresize and resize2fs.
+
+	  https://github.com/ya-mouse/fatresize

@@ -1,0 +1,19 @@
+hdaccess: include libgen.h for basename
+
+glibc declares a GNU basename in string.h; musl (1.2.5 on) declares only
+POSIX's, in libgen.h, so hdaccess.c fails with an implicit declaration.
+The device names it is given have no trailing slash, so the POSIX
+version's right to modify its argument never applies.
+
+Signed-off-by: XxI0NICxX <vifair22@gmail.com>
+---
+--- a/src/hdaccess.c	2024-01-05 05:40:38.000000000 -0600
++++ b/src/hdaccess.c	2026-09-27 20:55:20.888922209 -0500
+@@ -106,6 +106,7 @@
+ #include <stdlib.h>     /* free, atexit, posix_memalign */
+ #endif
+ #include <ctype.h>	/* isspace */
++#include <libgen.h>	/* basename: musl declares it only here */
+ #ifdef HAVE_GLOB_H
+ #include <glob.h>
+ #endif

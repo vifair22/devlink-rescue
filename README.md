@@ -33,3 +33,13 @@ config is generated from `board/classic/linux.fragment` by
 To build the agent from a devlink working tree rather than the pinned commit,
 put `DEVLINK_AGENT_OVERRIDE_SRCDIR = /path/to/devlink` in
 `build/classic/local.mk`.
+
+On a machine with Docker and no toolchain (binhost), fetch the sources where
+there is a login for the private repos, copy the tree across, and build in
+the container, which has Buildroot's prerequisites and nothing else:
+
+```sh
+make classic-source                  # here: every source into buildroot/dl
+rsync -a --exclude build/ ./ HOST:DIR/
+ssh HOST 'cd DIR && tools/build-in-docker.sh classic'
+```

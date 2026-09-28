@@ -37,11 +37,18 @@ Tools
 -----
   NTFS         ntfs-3g (mount -t ntfs-3g), ntfsfix, ntfsresize, ntfsclone,
                ntfslabel, ntfsundelete, ntfsinfo, mkntfs
-  FAT          fsck.fat, mkfs.fat, fatlabel, mtools (mdir, mcopy: no mount)
+  FAT          fsck.fat, mkfs.fat, fatlabel, fatresize,
+               mtools (mdir, mcopy: no mount)
+  exFAT        mkfs.exfat, fsck.exfat, exfatlabel
   ext2/3/4     e2fsck, mke2fs, resize2fs, tune2fs
-  Partitions   fdisk, sfdisk, parted, wipefs, blkid, lsblk
+  Partitions   fdisk, sfdisk, parted, wipefs, blkid, lsblk, partx, losetup,
+               gdisk and sgdisk (GPT)
+  Recovery     testdisk (lost partitions, boot sectors), photorec (carving)
   Imaging      ddrescue, dd
   Boot         ms-sys (MBRs and FAT boot records)
+  Station      falcon-boot-mkstick32 (falcon station-legacy onto a disk;
+               its files come from the card: see STATION/INSTALL.TXT there)
+  Cabinets     cabextract (9x RB00x.CAB registry backups, driver CABs)
   Registry     chntpw, reged, sampasswd, samusrgrp (NT hives and SAM)
   Hardware     memtester, hdparm, smartctl, dmidecode, lspci
   Clock        date, hwclock
@@ -74,11 +81,15 @@ These fail quietly: the command succeeds and the machine still does not boot.
 
 * The 9x registry (SYSTEM.DAT, USER.DAT) is not an NT hive and chntpw cannot
   read it. Restore a backup instead: SYSTEM.1ST in the root of C:, or an
-  RB00x.CAB from C:\WINDOWS\SYSBCKUP (unpack elsewhere; nothing here reads CAB).
+  RB00x.CAB from C:\WINDOWS\SYSBCKUP (cabextract -d DIR RB000.CAB).
 
 * The hardware clock on a Windows machine keeps local time. The agent's
   time --set sets only the system clock; once the zone is known, write the
   hardware clock with: hwclock --localtime --systohc
+
+* Shrinking NTFS is two steps, in order: ntfsresize -s SIZE first (dry run
+  with -n), then shrink the partition entry to no less than that size. Growing
+  is the reverse. ntfsresize marks the volume for chkdsk; let it run.
 
 * NTFS written here should be checked by Windows. After repairs, ntfsfix
   marks the volume for chkdsk at the next Windows boot; let it run.

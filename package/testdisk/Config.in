@@ -1,0 +1,15 @@
+config BR2_PACKAGE_TESTDISK
+	bool "testdisk"
+	depends on BR2_USE_MMU # fork()
+	select BR2_PACKAGE_NCURSES
+	select BR2_PACKAGE_E2FSPROGS
+	select BR2_PACKAGE_NTFS_3G
+	select BR2_PACKAGE_ZLIB
+	select BR2_PACKAGE_UTIL_LINUX
+	select BR2_PACKAGE_UTIL_LINUX_LIBUUID
+	help
+	  TestDisk finds lost partitions and rewrites a partition table
+	  or boot sector; PhotoRec, built with it, carves files out of a
+	  disk or image whose file system is gone. Text interface.
+
+	  https://www.cgsecurity.org/wiki/TestDisk

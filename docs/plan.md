@@ -41,7 +41,9 @@ on by hand.
   parts lack a TSC; they are handled if one turns up.
 - **RAM: 32 MB**, 16 MB as a stretch. Measured, not guessed at: it boots and
   serves the agent at 32 MB with 13 MB free (2026-09-25), and 10 MB available
-  with the network up and a TCP session open (2026-09-27). 24 MB fails before
+  with the network up and a TCP session open (2026-09-27). With the full disk
+  toolkit (a 5.8 MB tools squashfs), 8.1 MB available with the network up
+  (2026-09-27, later). 24 MB fails before
   unpacking: the kernel reports an invalid archive at the top of memory, where
   QEMU loads it, which looks like early boot overwriting it rather than a
   shortage. Open.
@@ -98,18 +100,29 @@ on by hand.
 | NT recovery | ntfs-3g; chntpw and reged for offline SAM and registry work; ms-sys for MBR and NT/2000/XP boot sectors; plain editing for `BOOT.INI` |
 | 9x recovery | dosfstools; ms-sys for FAT32 9x boot records; `IO.SYS` and friends copied by hand in place of `SYS C:` |
 | Hardware survey | lspci, dmidecode, `/proc/cpuinfo`, hdparm `-I`, smartctl, lsusb, memtester |
-| FAT12/16/32 | dosfstools (`mkfs.fat`, `fsck.fat`, `fatlabel`), mtools |
+| FAT12/16/32 | dosfstools (`mkfs.fat`, `fsck.fat`, `fatlabel`), mtools, fatresize (libparted) |
+| exFAT | exfatprogs (`mkfs.exfat`, `fsck.exfat`, `exfatlabel`) |
 | NTFS | ntfs-3g and ntfsprogs (`mkntfs`, `ntfsfix`, `ntfsresize`, `ntfsclone`, `ntfslabel`, `ntfsundelete`, `ntfsinfo`) |
 | ext2/3/4 | e2fsprogs (`mke2fs`, `e2fsck`, `resize2fs`, `tune2fs`) |
-| Partitions | util-linux `fdisk`, `sfdisk`, `wipefs`, `blkid`, `lsblk`; parted and fatresize if FAT32 resizing earns libparted |
+| Partitions | util-linux `fdisk`, `sfdisk`, `wipefs`, `blkid`, `lsblk`, `partx`, `losetup`; parted; gptfdisk (`gdisk`, `sgdisk`) |
+| Recovery | TestDisk (lost partitions, boot sectors) and PhotoRec (file carving) |
+| Station install | `falcon-boot-mkstick32`, falcon-boot built static for i586 musl: puts falcon station-legacy on a disk; the station files come from the card |
+| Cabinets | cabextract (9x `RB00x.CAB` registry backups) |
 | Imaging | ddrescue, dd |
 
 Decided against:
 
-- **TestDisk / PhotoRec.** Partition-table recovery and file carving. Left
-  out by choice (2026-09-25).
 - **The kernel's ntfs3** in place of ntfs-3g. Smaller, but less trusted on a
   damaged volume, and a rescue image meets damaged volumes.
+- **cryptsetup.** mkstick uses it for encrypted sticks, not for a legacy
+  install onto a disk, and it brings device-mapper, json-c, popt and a crypto
+  library: several MB for volumes these machines do not have (2026-09-27).
+
+A full disk toolkit (2026-09-27): TestDisk and PhotoRec, left out on
+2026-09-25, went in with fatresize, exfatprogs, gptfdisk, partx, losetup and
+cabextract when the image became what installs falcon station-legacy onto a
+machine's own disk. The tools sit in the compressed squashfs, so each costs
+its compressed size in RAM, not its installed size.
 
 Found while packaging (2026-09-25):
 
@@ -125,10 +138,6 @@ Found while packaging (2026-09-25):
 - **hdparm is the full one**, not busybox's, for `-I`.
 
 Open:
-
-- **cabextract.** 9x keeps registry backups as `RB00x.CAB`; Buildroot has
-  libmspack but no cabextract binary. A small package here would make that
-  restore possible without another machine.
 
 - **`pci.ids`** is over 1 MB. Trim it to vendors and devices before about 2005,
   or compress it; decided when the image size is known.

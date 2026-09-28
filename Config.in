@@ -1,3 +1,7 @@
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/cabextract/Config.in"
 source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/chntpw/Config.in"
 source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/devlink-agent/Config.in"
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/falcon-mkstick32/Config.in"
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/fatresize/Config.in"
 source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/ms-sys/Config.in"
+source "$BR2_EXTERNAL_DEVLINK_RESCUE_PATH/package/testdisk/Config.in"

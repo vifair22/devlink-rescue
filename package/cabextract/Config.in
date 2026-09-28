@@ -1,0 +1,8 @@
+config BR2_PACKAGE_CABEXTRACT
+	bool "cabextract"
+	help
+	  Extracts Microsoft cabinet files: the Windows 9x registry
+	  backups (RB00x.CAB, holding SYSTEM.DAT and USER.DAT) and the
+	  driver and setup CABs of the era, without another machine.
+
+	  https://www.cabextract.org.uk
