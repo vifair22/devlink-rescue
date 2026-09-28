@@ -55,6 +55,12 @@ CONFIG_ACPI=y
 # (board/classic/busybox.fragment, rootfs-overlay/etc/acpi).
 CONFIG_ACPI_BUTTON=y
 CONFIG_INPUT_EVDEV=y
+# The embedded controller. Default y on x86, but allnoconfig drops it, and a
+# laptop's power button, lid and Fn keys reach the OS through the EC's GPE,
+# which only this driver enables. Without it the A21m's power button never
+# raised an ACPI interrupt at all (sci count 0; found 2026-09-27). QEMU's
+# power button is a fixed-feature one, so QEMU cannot show this.
+CONFIG_ACPI_EC=y
 CONFIG_DMI=y
 CONFIG_DMIID=y
 # What the BIOS says about its disks, geometry included, in
@@ -250,6 +256,10 @@ CONFIG_MSDOS_FS=y
 CONFIG_VFAT_FS=y
 CONFIG_FAT_DEFAULT_CODEPAGE=437
 CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+# exFAT sticks (the exfat2k work): the kernel's driver mounts them, exfatprogs
+# makes and checks them. Its default iocharset is utf8, which NLS_UTF8 below
+# provides.
+CONFIG_EXFAT_FS=y
 CONFIG_FUSE_FS=y
 # The tools live in an xz squashfs inside the initramfs, loop-mounted over
 # /usr (post-fakeroot.sh). Single decompressor and direct-to-page-cache reads
