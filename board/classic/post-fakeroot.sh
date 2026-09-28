@@ -13,7 +13,7 @@
 # Runs as a post-fakeroot script, on the copy of the target Buildroot makes for
 # each filesystem image, so the real target stays whole for the next build.
 set -euo pipefail
-t=$1
+t=${1:?post-fakeroot.sh: no target directory given}
 mksquashfs=$HOST_DIR/bin/mksquashfs
 
 mkdir -p "$t/rescue"
@@ -44,6 +44,6 @@ for f in "$t"/usr/lib/libc.so "$t"/usr/lib/ld-musl-*.so.1; do
 done
 keep usr/share/rescue
 
-rm -rf -- "$t/usr"
+rm -rf -- "${t:?}/usr"
 mv "$early/usr" "$t/usr"
 rmdir "$early"

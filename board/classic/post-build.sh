@@ -3,7 +3,7 @@
 # root lives in RAM on a machine that may have 32 MB, so every file here costs
 # memory, not just space. Listed by name, so each removal is a decision.
 set -euo pipefail
-target=$1
+target=${1:?post-build.sh: no target directory given}
 
 unwanted=(
     # smartctl stays; smartd is a monitoring daemon.
