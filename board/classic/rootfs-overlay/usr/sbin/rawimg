@@ -5,18 +5,27 @@
 #
 #   rawimg A: FILE.IMG            write it, then read the disk back and compare
 #   rawimg -verify A: FILE.IMG    compare only
+#   rawimg -diff A: FILE.IMG      write only the tracks that differ
+#   rawimg -seg F-L ...           any of these on sectors F to L alone
 #
 # A: and B: name /dev/fd0 and /dev/fd1; a /dev/fdN path works too. Floppies
 # only: whole disks are RAWIMG.EXE's PHYSn on Windows and not done here.
 #
-# The disk is written a cylinder at a time with fsync. The readback is the
-# point, so before it the device's buffers are flushed and the page cache
-# dropped: without that the "read" comes from memory and proves nothing.
-# Exit 0 only when every byte on the disk matches the image.
+# -diff reads each track and compares it with the image, writes only those
+# that differ, and reads those back. A floppy wears with every write, and a
+# jump disk update usually changes a few tracks of 160; the reads that found
+# the rest equal are their check, so no second full pass is needed. -seg
+# takes sectors counted from 0, both ends included (a single N is one
+# sector), and combines with any mode.
+#
+# The disk is written a track at a time with fsync. The readback is the
+# point, so before every read pass the device's buffers are flushed and the
+# page cache dropped: without that the "read" comes from memory and proves
+# nothing. Exit 0 only when every byte in the range matches the image.
 set -u
 
 usage() {
-    echo "usage: rawimg [-verify] A: FILE.IMG" >&2
+    echo "usage: rawimg [-verify | -diff] [-seg FIRST-LAST] A: FILE.IMG" >&2
     exit 2
 }
 
@@ -25,11 +34,28 @@ fail() {
     exit 1
 }
 
-verify_only=0
-if [ "${1:-}" = "-verify" ]; then
-    verify_only=1
+mode='write'
+seg=
+while [ $# -gt 0 ]; do
+    case $1 in
+    -verify)
+        [ $mode = write ] || usage
+        mode='verify'
+        ;;
+    -diff)
+        [ $mode = write ] || usage
+        mode='diff'
+        ;;
+    -seg)
+        [ $# -ge 2 ] && [ -z "$seg" ] || usage
+        seg=$2
+        shift
+        ;;
+    -*) usage ;;
+    *) break ;;
+    esac
     shift
-fi
+done
 [ $# -eq 2 ] || usage
 case $1 in
 A: | a:) dev=/dev/fd0 ;;
@@ -56,7 +82,8 @@ case $size in
 *) fail "the image is $size bytes, not a 720K, 1.2M, 1.44M or 2.88M floppy" ;;
 esac
 cyls=80
-cyl=$((heads * sectors * 512))
+percyl=$((heads * sectors))
+nsect=$((size / 512))
 
 # The drive reports the capacity of the disk in it (or of its default format
 # when it cannot tell); a mismatch is the wrong disk or no disk.
@@ -64,46 +91,128 @@ disk=$(blockdev --getsize64 "$dev" 2>/dev/null) || fail "$dev: cannot read the d
 [ "$disk" = "$size" ] || fail "the image is $size bytes, the disk $disk"
 echo "$dev $cyls cylinders, $heads heads, $sectors sectors, $size bytes"
 
-# pass, cylinder: print at each tenth, as RAWIMG does. sh has no local
-# variables, so this one must not share a name with the callers' counter.
+# The range, in sectors: first and last included.
+first=0 last=$((nsect - 1))
+if [ -n "$seg" ]; then
+    case $seg in
+    *[!0-9-]* | -* | *- | *-*-*) fail "-seg $seg: want FIRST-LAST or N, in sectors" ;;
+    *-*) first=${seg%-*} last=${seg#*-} ;;
+    *) first=$seg last=$seg ;;
+    esac
+    # Leading zeros off, so $((...)) does not read 010 as octal.
+    first=$(echo "$first" | sed 's/^0*\(.\)/\1/')
+    last=$(echo "$last" | sed 's/^0*\(.\)/\1/')
+    [ "$first" -le "$last" ] || fail "-seg $seg: want FIRST-LAST or N, in sectors"
+    [ "$last" -lt $nsect ] ||
+        fail "-seg $first-$last is outside the image's sectors 0-$((nsect - 1))"
+    echo "segment: sectors $first-$last, $(((last - first + 1) * 512)) bytes"
+fi
+total=$((last - first + 1))
+
+# PASS DONE STEP TOTAL AT: a line at each tenth the pass crosses, as RAWIMG
+# does; DONE, STEP and TOTAL count sectors in the pass, AT is the sector the
+# pass has reached. sh has no local variables: these names are this one's.
 progress() {
-    p_next=$(($2 + 1))
-    if [ $((p_next * 10 / cyls)) -ne $(($2 * 10 / cyls)) ]; then
-        echo "$1: $((p_next * 100 / cyls))% (cylinder $p_next of $cyls)"
+    p_after=$((($2 + $3) * 10 / $4))
+    if [ $p_after -ne $(($2 * 10 / $4)) ]; then
+        echo "$1: $((p_after * 10))% (cylinder $(($5 / percyl)) of $cyls)"
     fi
 }
 
-if [ $verify_only -eq 0 ]; then
-    c=0
-    while [ $c -lt $cyls ]; do
-        dd if="$img" of="$dev" bs=$cyl skip=$c seek=$c count=1 \
-            conv=notrunc,fsync 2>/dev/null ||
-            fail "write failed at byte $((c * cyl))"
-        progress write $c
-        c=$((c + 1))
+# The length in sectors of the unit at sector S: to the end of its track, or
+# of the range.
+unit() {
+    u_n=$((sectors - $1 % sectors))
+    [ $u_n -le $((last - $1 + 1)) ] || u_n=$((last - $1 + 1))
+    echo $u_n
+}
+
+fresh() {
+    sync
+    blockdev --flushbufs "$dev" 2>/dev/null
+    echo 3 >/proc/sys/vm/drop_caches 2>/dev/null
+}
+
+ta=/tmp/rawimg.$$.a
+tb=/tmp/rawimg.$$.b
+trap 'rm -f "$ta" "$tb"' EXIT
+
+# S N: 0 when the disk's sectors S..S+N-1 match the image's, 1 when not.
+same() {
+    dd if="$img" bs=512 skip="$1" count="$2" 2>/dev/null >"$ta"
+    dd if="$dev" bs=512 skip="$1" count="$2" 2>/dev/null >"$tb" &&
+        [ "$(wc -c <"$tb")" -eq $(($2 * 512)) ] ||
+        fail "read failed at byte $(($1 * 512))"
+    cmp -s "$ta" "$tb"
+}
+
+put() {
+    dd if="$img" of="$dev" bs=512 skip="$1" seek="$1" count="$2" \
+        conv=notrunc,fsync 2>/dev/null ||
+        fail "write failed at byte $(($1 * 512))"
+}
+
+matched() {
+    if [ "$first" -eq 0 ] && [ "$last" -eq $((nsect - 1)) ]; then
+        echo "verified $size bytes: the disk matches the image"
+    else
+        echo "verified $((total * 512)) bytes: sectors $first-$last match the image"
+    fi
+}
+
+if [ $mode = diff ]; then
+    fresh
+    todo='' units=0 ndiff=0 bytes=0
+    s=$first
+    while [ "$s" -le "$last" ]; do
+        n=$(unit "$s")
+        if ! same "$s" "$n"; then
+            todo="$todo $s"
+            ndiff=$((ndiff + 1))
+            bytes=$((bytes + n * 512))
+        fi
+        units=$((units + 1))
+        progress compare $((s - first)) "$n" $total $((s + n))
+        s=$((s + n))
     done
-    echo "wrote $size bytes"
+    echo "$ndiff of $units tracks differ"
+    done_=0
+    for s in $todo; do
+        n=$(unit "$s")
+        put "$s" "$n"
+        progress write $done_ "$n" $((bytes / 512)) $((s + n))
+        done_=$((done_ + n))
+    done
+    [ $ndiff -eq 0 ] || echo "wrote $bytes bytes in $ndiff tracks"
+    fresh
+    done_=0
+    for s in $todo; do
+        n=$(unit "$s")
+        same "$s" "$n" || fail "MISMATCH in the $((n * 512)) bytes at byte $((s * 512))"
+        progress verify $done_ "$n" $((bytes / 512)) $((s + n))
+        done_=$((done_ + n))
+    done
+    matched
+    exit 0
 fi
 
-sync
-blockdev --flushbufs "$dev" 2>/dev/null
-echo 3 >/proc/sys/vm/drop_caches 2>/dev/null
+if [ $mode = write ]; then
+    s=$first
+    while [ "$s" -le "$last" ]; do
+        n=$(unit "$s")
+        put "$s" "$n"
+        progress write $((s - first)) "$n" $total $((s + n))
+        s=$((s + n))
+    done
+    echo "wrote $((total * 512)) bytes"
+fi
 
-back=/tmp/rawimg.$$
-trap 'rm -f "$back"' EXIT
-: >"$back"
-c=0
-while [ $c -lt $cyls ]; do
-    dd if="$dev" bs=$cyl skip=$c count=1 2>/dev/null >>"$back" ||
-        fail "read failed at byte $((c * cyl))"
-    progress verify $c
-    c=$((c + 1))
+fresh
+s=$first
+while [ "$s" -le "$last" ]; do
+    n=$(unit "$s")
+    same "$s" "$n" || fail "MISMATCH in the $((n * 512)) bytes at byte $((s * 512))"
+    progress verify $((s - first)) "$n" $total $((s + n))
+    s=$((s + n))
 done
-if ! cmp -s "$back" "$img"; then
-    # busybox cmp says "char N", GNU cmp "byte N".
-    at=$(cmp "$back" "$img" 2>/dev/null | sed -n 's/.* \(byte\|char\) \([0-9]*\).*/\2/p')
-    # cmp counts from 1; RAWIMG's offsets count from 0.
-    [ -n "$at" ] && at=$((at - 1))
-    fail "MISMATCH at byte ${at:-?}"
-fi
-echo "verified $size bytes: the disk matches the image"
+matched
