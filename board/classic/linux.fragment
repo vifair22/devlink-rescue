@@ -92,7 +92,9 @@ CONFIG_PCI_GOANY=y
 # PC Card and CardBus sockets, as laptops of the period have (the A21m's are
 # a TI PCI1450). Without them the kernel lists the bridges and nothing in
 # them: on the A21m the CF card the image boots from was invisible. The ATA
-# driver below is what makes a CF or PC Card disk a disk.
+# driver below is what makes a CF or PC Card disk a disk. A bridge on the
+# root bus, as the A21m's is, also needs /rescue/pcmcia-up to give its
+# sockets ports and memory before any 16-bit card is added.
 CONFIG_PCCARD=y
 CONFIG_PCMCIA=y
 CONFIG_CARDBUS=y

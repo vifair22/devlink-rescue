@@ -1,0 +1,46 @@
+#!/bin/sh
+# Gives each PC Card socket the I/O ports and memory it may hand to 16-bit
+# cards, which is what makes a CompactFlash card in a socket a disk
+# (pata_pcmcia) and a 16-bit network card an interface.
+#
+# The kernel does this itself only for a CardBus bridge behind a PCI-PCI
+# bridge. On x86 a bridge on the root bus, as most laptops' are (the A21m's
+# TI PCI-1450 is at 00:02.0 and 00:02.1), gets nothing, and every 16-bit
+# card is held back with "no resources available, delaying card_add" until
+# userspace supplies them (drivers/pcmcia/rsrc_nonstatic.c,
+# nonstatic_autoadd_resources). On a desktop distribution that is
+# pcmciautils' pcmcia-socket-startup reading /etc/pcmcia/config.opts; this
+# is the same, with that file's x86 defaults. CardBus cards need none of it.
+#
+# The ports are its defaults: the kernel takes a range only where nothing
+# has claimed it, and never one below 0x100. 0x4d0-0x4d7 is the interrupt
+# controller's edge/level register.
+#
+# Memory is only above 1 MB. The bridge has page registers, so the kernel
+# prefers high memory for the window it reads a card's CIS through, and
+# every range given here is probed by mapping that window over it. Below
+# 1 MB are option ROMs, which a probe would read instead of the card: the
+# A21m shadows its network card's PXE ROM at 0xD0000-0xD3FFF, where
+# Falcon's PC Card module read the ROM as the card's CIS (thinkpad-a21m
+# HARDWARE.md). Both ranges have to lie inside a root bus window and above
+# RAM, as they do on a machine of this age with less than 1.5 GB.
+#
+# Writing available_resources_setup_done releases the delayed card: it is
+# added in the background, and libata probes it a moment after that. This
+# does not wait for it. A card inserted later is added when it is.
+
+for sock in /sys/class/pcmcia_socket/pcmcia_socket*; do
+    [ -e "$sock/available_resources_io" ] || continue
+    for r in "+ 0x100 - 0x3af" "+ 0x3e0 - 0x4ff" "- 0x4d0 - 0x4d7" \
+             "+ 0x820 - 0x8ff" "+ 0xc00 - 0xcf7"; do
+        echo "$r" > "$sock/available_resources_io" 2>/dev/null ||
+            echo "pcmcia-up: ${sock##*/}: io $r refused" > /dev/console
+    done
+    for r in "+ 0xa0000000 - 0xa0ffffff" "+ 0x60000000 - 0x60ffffff"; do
+        echo "$r" > "$sock/available_resources_mem" 2>/dev/null ||
+            echo "pcmcia-up: ${sock##*/}: mem $r refused" > /dev/console
+    done
+    echo 1 > "$sock/available_resources_setup_done"
+done
+
+exit 0

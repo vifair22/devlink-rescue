@@ -19,6 +19,10 @@
 ::sysinit:/bin/mount -t tmpfs tmpfs /dev/shm
 ::sysinit:/bin/hostname -F /etc/hostname
 
+# PC Card sockets on the root PCI bus get no resources from the kernel, and
+# their 16-bit cards (a CF card, a PC Card NIC) wait for these.
+::sysinit:/rescue/pcmcia-up
+
 # The TCP passphrase from the machine's own disk, before the agent starts
 # (/rescue/find-key says what it reads and how to supply one instead), and the
 # network, beside it.
